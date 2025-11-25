@@ -959,8 +959,29 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
 
   public void addTransceiverOfType(String mediaType, Map<String, Object> transceiverInit, Result result) {
     RtpTransceiver transceiver;
+    
+    // Check if this is a RecvOnly audio transceiver
+    boolean isRecvOnlyAudio = false;
+    if (transceiverInit != null && "audio".equals(mediaType)) {
+      String direction = (String) transceiverInit.get("direction");
+      if ("recvonly".equals(direction)) {
+        isRecvOnlyAudio = true;
+      }
+    }
+    
     if (transceiverInit != null) {
-      transceiver = peerConnection.addTransceiver(stringToMediaType(mediaType), mapToRtpTransceiverInit(transceiverInit));
+      // For RecvOnly audio, change direction to SendRecv to ensure server sends audio
+      // Some servers (like fastrtc) require send capability in SDP to send audio
+      // We create transceiver with SendRecv but without a track, so no actual sending happens
+      if (isRecvOnlyAudio) {
+        // Create a modified transceiverInit with SendRecv direction
+        Map<String, Object> modifiedInit = new HashMap<>(transceiverInit);
+        modifiedInit.put("direction", "sendrecv");
+        transceiver = peerConnection.addTransceiver(stringToMediaType(mediaType), mapToRtpTransceiverInit(modifiedInit));
+        Log.d(TAG, "addTransceiverOfType: Changed RecvOnly audio to SendRecv (no track) to ensure server sends audio");
+      } else {
+        transceiver = peerConnection.addTransceiver(stringToMediaType(mediaType), mapToRtpTransceiverInit(transceiverInit));
+      }
     } else {
       transceiver = peerConnection.addTransceiver(stringToMediaType(mediaType));
     }
