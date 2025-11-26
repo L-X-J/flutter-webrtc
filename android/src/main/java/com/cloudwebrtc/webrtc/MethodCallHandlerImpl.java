@@ -1066,6 +1066,24 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         });
         break;
       }
+      case "clearRemoteAudioBuffer": {
+        Integer durationMs = call.argument("durationMs");
+        if (durationMs == null) {
+          durationMs = 300; // 默认 300ms
+        }
+        if (audioProcessingController != null) {
+          audioProcessingController.renderPreProcessing.clearAudioBuffer(durationMs);
+        }
+        result.success(null);
+        break;
+      }
+      case "resumeRemoteAudio": {
+        if (audioProcessingController != null) {
+          audioProcessingController.renderPreProcessing.resumeAudio();
+        }
+        result.success(null);
+        break;
+      }
       case "setLogSeverity": {
         //now it's possible to setup logSeverity only via PeerConnectionFactory.initialize method
         //Log.d(TAG, "no implementation for 'setLogSeverity'");

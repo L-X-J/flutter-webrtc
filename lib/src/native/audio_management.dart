@@ -8,17 +8,15 @@ import 'utils.dart';
 
 class NativeAudioManagement {
   static Future<void> selectAudioInput(String deviceId) async {
-    await WebRTC.invokeMethod(
-      'selectAudioInput',
-      <String, dynamic>{'deviceId': deviceId},
-    );
+    await WebRTC.invokeMethod('selectAudioInput', <String, dynamic>{
+      'deviceId': deviceId,
+    });
   }
 
   static Future<void> setSpeakerphoneOn(bool enable) async {
-    await WebRTC.invokeMethod(
-      'enableSpeakerphone',
-      <String, dynamic>{'enable': enable},
-    );
+    await WebRTC.invokeMethod('enableSpeakerphone', <String, dynamic>{
+      'enable': enable,
+    });
   }
 
   static Future<void> ensureAudioSession() async {
@@ -39,8 +37,9 @@ class NativeAudioManagement {
         await WebRTC.invokeMethod('setVolume', <String, dynamic>{
           'trackId': track.id,
           'volume': volume,
-          'peerConnectionId':
-              track is MediaStreamTrackNative ? track.peerConnectionId : null
+          'peerConnectionId': track is MediaStreamTrackNative
+              ? track.peerConnectionId
+              : null,
         });
       }
     }
@@ -49,17 +48,19 @@ class NativeAudioManagement {
   }
 
   static Future<void> setMicrophoneMute(
-      bool mute, MediaStreamTrack track) async {
+    bool mute,
+    MediaStreamTrack track,
+  ) async {
     if (track.kind != 'audio') {
       throw 'The is not an audio track => $track';
     }
 
     if (!kIsWeb) {
       try {
-        await WebRTC.invokeMethod(
-          'setMicrophoneMute',
-          <String, dynamic>{'trackId': track.id, 'mute': mute},
-        );
+        await WebRTC.invokeMethod('setMicrophoneMute', <String, dynamic>{
+          'trackId': track.id,
+          'mute': mute,
+        });
       } on PlatformException catch (e) {
         throw 'Unable to MediaStreamTrack::setMicrophoneMute: ${e.message}';
       }
@@ -71,10 +72,7 @@ class NativeAudioManagement {
   static Future<void> startLocalRecording() async {
     if (!kIsWeb) {
       try {
-        await WebRTC.invokeMethod(
-          'startLocalRecording',
-          <String, dynamic>{},
-        );
+        await WebRTC.invokeMethod('startLocalRecording', <String, dynamic>{});
       } on PlatformException catch (e) {
         throw 'Unable to start local recording: ${e.message}';
       }
@@ -84,10 +82,7 @@ class NativeAudioManagement {
   static Future<void> stopLocalRecording() async {
     if (!kIsWeb) {
       try {
-        await WebRTC.invokeMethod(
-          'stopLocalRecording',
-          <String, dynamic>{},
-        );
+        await WebRTC.invokeMethod('stopLocalRecording', <String, dynamic>{});
       } on PlatformException catch (e) {
         throw 'Unable to stop local recording: ${e.message}';
       }
@@ -132,6 +127,33 @@ class NativeAudioManagement {
       );
     } on PlatformException catch (e) {
       throw 'Unable to set isVoiceProcessingBypassed: ${e.message}';
+    }
+  }
+
+  /// 清空远程音频缓冲区，实现打断效果
+  ///
+  /// [durationMs] 丢弃音频的持续时间（毫秒），默认 300ms
+  /// 这段时间内接收到的音频数据会被静音处理
+  static Future<void> clearRemoteAudioBuffer({int durationMs = 300}) async {
+    if (kIsWeb) return;
+
+    try {
+      await WebRTC.invokeMethod('clearRemoteAudioBuffer', <String, dynamic>{
+        'durationMs': durationMs,
+      });
+    } on PlatformException catch (e) {
+      throw 'Unable to clear remote audio buffer: ${e.message}';
+    }
+  }
+
+  /// 立即恢复远程音频播放
+  static Future<void> resumeRemoteAudio() async {
+    if (kIsWeb) return;
+
+    try {
+      await WebRTC.invokeMethod('resumeRemoteAudio');
+    } on PlatformException catch (e) {
+      throw 'Unable to resume remote audio: ${e.message}';
     }
   }
 }

@@ -1108,6 +1108,19 @@ static FlutterWebRTCPlugin *sharedSingleton;
     result(nil);
   }
 #endif
+  else if ([@"clearRemoteAudioBuffer" isEqualToString:call.method]) {
+    NSDictionary* argsMap = call.arguments;
+    NSNumber* durationMs = argsMap[@"durationMs"];
+    if (durationMs == nil) {
+      durationMs = @300; // 默认 300ms
+    }
+    [_audioManager.renderPreProcessingAdapter clearAudioBufferWithDuration:[durationMs doubleValue]];
+    result(nil);
+  }
+  else if ([@"resumeRemoteAudio" isEqualToString:call.method]) {
+    [_audioManager.renderPreProcessingAdapter resumeAudio];
+    result(nil);
+  }
   else if ([@"getLocalDescription" isEqualToString:call.method]) {
     NSDictionary* argsMap = call.arguments;
     NSString* peerConnectionId = argsMap[@"peerConnectionId"];

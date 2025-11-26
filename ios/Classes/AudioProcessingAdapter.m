@@ -8,12 +8,17 @@
   os_unfair_lock _lock;
 }
 
+@synthesize shouldDiscardAudio = _shouldDiscardAudio;
+@synthesize discardUntilTime = _discardUntilTime;
+
 - (instancetype)init {
   self = [super init];
   if (self) {
     _lock = OS_UNFAIR_LOCK_INIT;
     _renderers = [[NSMutableArray<id<RTCAudioRenderer>> alloc] init];
     _processors = [[NSMutableArray<id<ExternalAudioProcessingDelegate>> alloc] init];
+    _shouldDiscardAudio = NO;
+    _discardUntilTime = 0;
   }
   return self;
 }
@@ -50,6 +55,18 @@
   os_unfair_lock_unlock(&_lock);
 }
 
+- (void)clearAudioBufferWithDuration:(NSTimeInterval)durationMs {
+  _shouldDiscardAudio = YES;
+  _discardUntilTime = [[NSDate date] timeIntervalSince1970] * 1000.0 + durationMs;
+  NSLog(@"[AudioProcessingAdapter] clearAudioBuffer for %f ms", durationMs);
+}
+
+- (void)resumeAudio {
+  _shouldDiscardAudio = NO;
+  _discardUntilTime = 0;
+  NSLog(@"[AudioProcessingAdapter] resumeAudio");
+}
+
 - (void)audioProcessingInitializeWithSampleRate:(size_t)sampleRateHz channels:(size_t)channels {
   os_unfair_lock_lock(&_lock);
   for (id<ExternalAudioProcessingDelegate> processor in _processors) {
@@ -83,6 +100,22 @@
 }
 
 - (void)audioProcessingProcess:(RTC_OBJC_TYPE(RTCAudioBuffer) *)audioBuffer {
+  // 打断逻辑：如果需要丢弃音频，则清空 buffer
+  if (_shouldDiscardAudio) {
+    NSTimeInterval currentTime = [[NSDate date] timeIntervalSince1970] * 1000.0;
+    if (currentTime < _discardUntilTime) {
+      // 清空 buffer（静音）
+      for (int i = 0; i < audioBuffer.channels; i++) {
+        float* buffer = [audioBuffer rawBufferForChannel:i];
+        memset(buffer, 0, audioBuffer.frames * sizeof(float));
+      }
+      return; // 跳过后续处理
+    } else {
+      // 时间到了，恢复正常
+      _shouldDiscardAudio = NO;
+    }
+  }
+
   os_unfair_lock_lock(&_lock);
   for (id<ExternalAudioProcessingDelegate> processor in _processors) {
     [processor audioProcessingProcess:audioBuffer];

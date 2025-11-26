@@ -13,6 +13,10 @@
 
 @interface AudioProcessingAdapter : NSObject <RTCAudioCustomProcessingDelegate>
 
+// 打断机制属性
+@property (nonatomic, assign) BOOL shouldDiscardAudio;
+@property (nonatomic, assign) NSTimeInterval discardUntilTime;
+
 - (nonnull instancetype)init;
 
 - (void)addProcessing:(id<ExternalAudioProcessingDelegate> _Nonnull)processor;
@@ -22,5 +26,9 @@
 - (void)addAudioRenderer:(nonnull id<RTCAudioRenderer>)renderer;
 
 - (void)removeAudioRenderer:(nonnull id<RTCAudioRenderer>)renderer;
+
+// 打断方法
+- (void)clearAudioBufferWithDuration:(NSTimeInterval)durationMs;
+- (void)resumeAudio;
 
 @end
